@@ -1,5 +1,59 @@
+
 ####################
-## figure 5: An illustrative simulation of the cascading transitions model for aging. 
+##  Figure 4: HSBM
+####################
+
+library(igraph)
+library(colorspace)
+library(qgraph)
+
+hsbm <- function (cluster_sizes,strengths=NULL,plot=T)
+{
+  k=cluster_sizes # cluster sizes
+  levels=length(k) # hierarchic levels
+  n=prod(k) # nodes
+  if(n > 2000) print('Warning: ', n, 'nodes', 'might be too much for qgraph')
+  if(length(k)!=length(strengths)) { print ('cluster_sizes and strengths dont match');stop()}
+  group=rep(0,n) # node group
+  m=matrix(levels,n,n) # connection matrix
+  for(l in (levels-1):1)
+    for(i in 1:n)
+    {for(j in 1:n)
+      if((i-1)%/%prod(k[1:l])==(j-1)%/%prod(k[1:l])) m[i,j]=l
+    group[i]=(i-1)%/%prod(k[1:l])
+    }
+  
+  if(plot) image(1/(m+.5))
+  
+  if(length(strengths)<1) m <- 1/m^3 else
+  {
+    for(i in 1:levels)
+      m[m==i]=strengths[i]
+  }
+  return(list(m,group))
+}
+
+#clusters=c(4,4,4,4,4);strengths = c(1,.3,.1,.02,.005)
+clusters=c(4,4,4,4);strengths = c(.8,.1,.04,.008)
+clusters=c(4,3,6,5);strengths = c(.8,.1,.04,.02)
+
+
+h=hsbm(clusters,strengths)
+m <- h[[1]]
+group=h[[2]]
+
+name2=paste('network',paste0(clusters,collapse=''),'.jpeg',sep='',col='')
+jpeg(name2,width = 5, height = 3, units = 'in', res = 300)
+layout(t(1))
+#qgraph(m,groups=group, layout="spring",labels=F,vsize=1,edge.width=.4, bg=adjustcolor("white", alpha.f=0),border.width=.1) # collor version
+qgraph(m,groups = group,layout = "spring",labels = FALSE,vsize = 1,edge.width = 0.3,bg = "white",palette='grey',border.color = "black",edge.color = "gray",label.color = "black",edge.width=.6) 
+dev.off()
+
+
+
+
+####################
+## figure 6: An illustrative simulation of the cascading transitions model for aging. 
 ####################
 
 # packages required
@@ -43,8 +97,8 @@ model <- function(t, state, parms){
 # parameter settings
 a0=rep(0,N) # intercepts of normal
 a=matrix(rnorm(N*N,.4,0),N,N) # couplings effects on normal
-a[diag(N)==1] = 0 # set diagonal to 0
 b=rnorm(N,1,1) # random splitting values
+b[1]=-1 # to illustrate continuous decline by setitng the splitting value  low
 
 # 20% of the variables will decrease slowly after t = 20 (see run())
 degrading=-.2 * sample(0:1,N,T,prob=c(.8,.2))
@@ -56,11 +110,11 @@ s <- c(X);p <- c(a0) # required for grind
 # run the model:
 Xm=as.matrix(run(tmax=tmax,ymin=-s.m,ymax=s.m,
                  after="if(t>20)parms<-parms+degrading;
-                 state<-state+rnorm(N,mean=0,sd=0.01)",timeplot=FALSE,table=TRUE))
+                 state<-state+rnorm(N,mean=0,sd=0.05)",timeplot=FALSE,table=TRUE))
 # Xm contains the values of all nodes over all time points
 
 # plot settings
-pdf('figure5.pdf',h=6,w=9)
+pdf('figure6.pdf',h=6,w=9)
 widths=rep(1,12) 
 widths[1]=.3
 height=c(rep(.5,6),rep(1,6))
@@ -85,7 +139,8 @@ for (t in c(10,tmax/4,2*tmax/4, 3*tmax/4,tmax))
 
 #plot the time series for all nodes
 par(cex=1.1,mar=c(3,4,0,1),las=1,mgp=c(1.5, 1, 0))
-matplot(Xm[1:tmax,-1],type='l',lty=1,lwd=.5,col=3*(degrading!=0)+1, ylab='',xlab='time',bty='n',axes=F)
+matplot(Xm[2:tmax,-1],type='l',lty=1,lwd=.5,col=3*(degrading!=0)+1, ylab='',xlab='time',bty='n',axes=F)
+lines(Xm[2:tmax,2],col='purple',lwd=1.5)
 axis(1,at=c(0,100,200,300))
 axis(2,at=c(2,0,-2))
 mtext('X',2,1.5,at=1)
@@ -93,7 +148,7 @@ mtext('X',2,1.5,at=1)
 dev.off() # close plot file
 
 ####################
-## figure 6
+## figure 7
 ####################
 library(igraph)
 library(colorspace)
@@ -189,7 +244,7 @@ iterations=30000
   }
   }
   
-  ## creating figure 6 requires advances plotting tricks
+  ## creating figure requires advances plotting tricks
   
   capturePlot <- function() {
     grid.echo()
@@ -200,12 +255,12 @@ iterations=30000
   for(jj in 1:j)
   {
     qgraph(m,color=2+(xi[jj,]+1)/2, layout="spring",labels=F,
-           vsize=.6,edge.width=.4,bg=adjustcolor("white", alpha.f=0))
+           vsize=.4,edge.width=.3,bg=adjustcolor("white", alpha.f=0),border.width=.1)
     plotGrob[[jj]] <- capturePlot()
             print(jj)
   }
   qgraph(m,groups=group, layout="spring",labels=F,
-         vsize=1,edge.width=.4, bg=adjustcolor("white", alpha.f=0)) 
+         vsize=.6,edge.width=.3, bg=adjustcolor("white", alpha.f=0),border.width=.1) 
   plotGrob1 <- capturePlot()
   
   png("temp_plot.png",w=800,h=500,res=200)
@@ -214,14 +269,14 @@ iterations=30000
        lwd=1.5,col='black',cex.axis=1.5,cex.lab=1.2,
        axes=F,cex.main=1.2,
        main=paste('Decrease in external field'),
-       bg=adjustcolor("white", alpha.f=0))
+       bg=adjustcolor("white", alpha.f=0),border.width=.1)
   axis(1,labels=FALSE);axis(2,at=range(t))
   dev.off()
   img <- readPNG("temp_plot.png")
   plotGrob2 <- rasterGrob(img, width=unit(1,"npc"), height=unit(1,"npc"))
   
   
-  pdf(paste('figure6.pdf',sep='',collapse=''),h=8,w=12)
+  pdf(paste('figure7.pdf',sep='',collapse=''),h=8,w=12)
   par(mar=c(5,6,3,6))
   plot(s,bty='n',type='l',xlab='time',ylab=expression(bar(x)),
        ylim=c(-1.2,1.1),lwd=5,col='blue',cex.axis=1.5,cex.lab=1.5,las=1,
@@ -254,7 +309,7 @@ iterations=30000
 
 
 ####################
-## figure 7
+## figure 8
 ###################
 
 library(igraph)
@@ -440,7 +495,7 @@ for (person in 1:nr_of_persons) {
   ss[[person]] <- s
 } # persons loop 
 
-
+pdf('figure 8gr.pdf',w=5,h=6)
 # for all persons
 par(mar=c(5,5,3,6))
 for(i in 1:nr_of_persons){
@@ -456,7 +511,7 @@ for(i in 1:nr_of_persons){
   
   
 } 
-
+dev.off()
 #  advanced plot stuff (figure 7A)
 capturePlot <- function() {
   grid.echo()
@@ -468,13 +523,13 @@ plotGrob <- vector("list", length = j)
 for(jj in 1:j)
 {
   qgraph(mi[jj,,],color=2+(xi[jj,]+1)/2, layout=q$layout,labels=F,
-         vsize=.6,edge.width=.4,bg=adjustcolor("white", alpha.f=0))
+         vsize=.4,edge.width=.3,bg=adjustcolor("white", alpha.f=0),border.width=.1)
   plotGrob[[jj]] <- capturePlot()
   print(jj)
 }
 
 qgraph(m_orig,groups=group, layout=q$layout,labels=F,
-       vsize=1,edge.width=.4, bg=adjustcolor("white", alpha.f=0))
+       vsize=.6,edge.width=.3, bg=adjustcolor("white", alpha.f=0),border.width=.1)
 plotGrob1 <- capturePlot()
 
 png("temp_plot.png",w=800,h=500,res=200)
@@ -483,7 +538,7 @@ plot(linksi,type='l',xlab='time',ylab="# connections",bty='o',
      lwd=1.5,col='black',cex.axis=1.5,cex.lab=1.2,
      axes=F,cex.main=1.2,
      main=paste('Decrease in connections'),
-     bg=adjustcolor("white", alpha.f=0))
+     bg=adjustcolor("white", alpha.f=0),border.width=.1)
 axis(1,labels=FALSE);axis(2,at=range(linksi))
 dev.off()
 img <- readPNG("temp_plot.png")
@@ -491,7 +546,7 @@ plotGrob2 <- rasterGrob(img, width=unit(1,"npc"), height=unit(1,"npc"))
 
 
 
-pdf(paste('figure7.pdf',sep='',collapse=''),h=8,w=12)
+pdf(paste('figure8.pdf',sep='',collapse=''),h=8,w=12)
 par(mar=c(5,5,3,6))
 plot(s,bty='n',type='l',xlab='time',ylab=expression(bar(x)),
      ylim=c(-1.2,1.1),lwd=5,col='blue',cex.axis=1.5,cex.lab=1.5,las=1,
@@ -527,4 +582,197 @@ popViewport()
 
 dev.off()
 
+####################
+## figure 9
+###################
 
+## same as figure 8 but now with a hierarchical stochastic block
+
+library(igraph)
+library(colorspace)
+library(qgraph)
+
+getMatrixIndices <- function(matrix, index) {
+  nrows <- nrow(matrix)
+  row_index <- ((index - 1) %% nrows) + 1
+  col_index <- ((index - 1) %/% nrows) + 1
+  return(c(row_index,col_index))
+}
+
+hamiltonian=function(x,n,t,w) -sum(t*x)-sum(w*x%*%t(x)/2)
+glauber_step = function(x,n,t,w,beta)
+{
+  i = sample(1:n,size=1) # take a random node
+  x_new=x;x_new[i]=x_new[i]*-1 # construct new state with flipped node
+  p=1/(1+exp(beta*(hamiltonian(x_new,n,t,w)-hamiltonian(x,n,t,w))))  # update probability
+  if(runif(1)<p) x=x_new # update state
+  return(x)
+}
+
+# create (hierarchical) SBM
+hsbm <- function (cluster_sizes,strengths=NULL,plot=T)
+{
+  k=cluster_sizes # cluster sizes
+  levels=length(k) # hierarchic levels
+  n=prod(k) # nodes
+  if(n > 2000) print('Warning: ', n, 'nodes', 'might be too much for qgraph')
+  if(length(k)!=length(strengths)) { print ('cluster_sizes and strengths dont match');stop()}
+  group=rep(0,n) # node group
+  m=matrix(levels,n,n) # connection matrix
+  for(l in (levels-1):1)
+    for(i in 1:n)
+    {for(j in 1:n)
+      if((i-1)%/%prod(k[1:l])==(j-1)%/%prod(k[1:l])) m[i,j]=l
+    group[i]=(i-1)%/%prod(k[1:l])
+    }
+  
+  if(plot) image(1/(m+.5))
+  
+  if(length(strengths)<1) m <- 1/m^3 else
+  {
+    for(i in 1:levels)
+      m[m==i]=strengths[i]
+  }
+  return(list(m,group))
+}
+
+iterations=50000
+
+    set.seed(1)
+    clusters=c(8,3,3,4);strengths = c(1,.1,.02,.0005)
+    t=seq(-2.5,-5,length=iterations)
+    beta=2
+    name1=''
+    name2='Hierarchical stochastic\nblock model (HSBM)'
+  
+  
+  #build network  
+  h=hsbm(clusters,strengths)
+  m <- h[[1]]
+  group=h[[2]]
+  
+  # delete 20% of nodes
+  del=sample(1:nrow(m),round(nrow(m)/5))
+  m=m[-del,-del]
+  group=group[-del]
+  
+  n <- nrow(m) # nr of nodes
+  x=rep(1,n) # start values positive
+  
+  m=ifelse(m>matrix(runif(n*n,0,1),n,n),1,0)
+  m[lower.tri(m)] <- t(m)[lower.tri(m)]
+  diag(m)=0
+  
+ group <- as_membership(cluster_louvain(
+    graph_from_adjacency_matrix(m, mode = "undirected")))$membership
+  
+  q=qgraph(m,groups=group, layout="spring",labels=F,vsize=1) 
+  m_orig=m
+  
+  # run simulation
+  s=rep(0,iterations)
+  
+  ii=iterations/5
+  xi=matrix(NA,floor(iterations/ii),n) # collect x values 
+  mi=array(NA,c(floor(iterations/ii),n,n)) # collect x values 
+  linksi=rep(n,iterations)
+  
+  j=0
+  for(i in 1:iterations)
+  {  x<-glauber_step(x,n,t=t[1],m,beta)
+  s[i]=mean(x)
+  linksi[i]=sum(m)
+  if(i%%(iterations/400)==0)
+  {
+    links=which(m==1)
+    if(length(links>0))
+    {
+      link=sample(links,1)
+      m[link]=0
+      link_index=getMatrixIndices(m,link)
+      m[link_index[2],link_index[1]]=0
+    }
+  }
+  if(i%%ii==0)
+  {
+    j=j+1
+    print(i);print(sum(m))
+    xi[j,]=x
+    mi[j,,]=m
+  }
+  }
+  
+  #  advanced plot stuff (figure 8)
+  capturePlot <- function() {
+    grid.echo()
+    grid.grab()
+  }
+  plot.new()
+  #stop()
+  plotGrob <- vector("list", length = j)
+  for(jj in 1:j)
+  {
+    qgraph(mi[jj,,],color=2+(xi[jj,]+1)/2, layout=q$layout,labels=F,
+           vsize=.4,edge.width=.3,bg=adjustcolor("white", alpha.f=0),border.width=.1)
+    plotGrob[[jj]] <- capturePlot()
+    print(jj)
+  }
+  
+  qgraph(m_orig,groups=group, layout=q$layout,labels=F,
+         vsize=.6,edge.width=.3, bg=adjustcolor("white", alpha.f=0),border.width=.1)
+  plotGrob1 <- capturePlot()
+  
+  png("temp_plot.png",w=800,h=500,res=200)
+  par(mar=c(5,5,3,3),mgp=c(2, 1, 0))
+  plot(linksi,type='l',xlab='time',ylab="# connections",bty='o',
+       lwd=1.5,col='black',cex.axis=1.5,cex.lab=1.2,
+       axes=F,cex.main=1.2,
+       main=paste('Decrease in connections'),
+       bg=adjustcolor("white", alpha.f=0),border.width=.1)
+  axis(1,labels=FALSE);axis(2,at=range(linksi))
+  dev.off()
+  img <- readPNG("temp_plot.png")
+  plotGrob2 <- rasterGrob(img, width=unit(1,"npc"), height=unit(1,"npc"))
+  
+  
+  
+  pdf(paste('figure9.pdf',sep='',collapse=''),h=8,w=12)
+  par(mar=c(5,5,3,6))
+  plot(s,bty='n',type='l',xlab='time',ylab=expression(bar(x)),
+       ylim=c(-1.2,1.1),lwd=5,col='blue',cex.axis=1.5,cex.lab=1.5,las=1,
+       axes=F,cex.main=1.5,main=name1)
+  axis(1,labels=FALSE);axis(2)
+  text(iterations/6,-1.1, name2)
+  # axis(side = 4, at = pretty(range(t)), las = 1)
+  # mtext("Right Y-Axis", side = 4, line = 3)
+  # par(new = TRUE);par(mar=c(5,5,3,6))
+  # plot(t, type = "l", col = "black", ylim = range(t), axes = FALSE, xlab = "", ylab = "")
+  # legend("topright", legend = c("X", "tau"), col = c("blue", "black"), lty = 1)
+  
+  for(jj in 1:j)
+  {
+    vp <- viewport(x=.9*(jj*ii/iterations), y=-.1+(.6*s[ii+(jj-1)*ii]+1)/2,
+                   width=0.2, height=0.35, just=c("center","bottom"))
+    pushViewport(vp)
+    grid.draw(plotGrob[[jj]])
+    popViewport()
+  }
+  
+  vp <- viewport(x=.25, y=.18,
+                 width=0.25, height=.35, just=c("center","bottom"))
+  pushViewport(vp)
+  grid.draw(plotGrob1)
+  popViewport()
+  
+  vp <- viewport(x=.83, y=.65,
+                 width=0.28, height=.28, just=c("center","bottom"))
+  pushViewport(vp)
+  grid.draw(plotGrob2)
+  popViewport()
+  
+  dev.off()
+  
+  
+  
+  
+  
