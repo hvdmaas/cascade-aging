@@ -1,4 +1,10 @@
 
+## note: figure 7 is skippe din the present versiomn of the paper
+# thus figure 8 here is figure 7 in the paper
+# thus figure 9 here is figure 8 in the paper
+
+
+
 ####################
 ##  Figure 4: HSBM
 ####################
@@ -134,7 +140,7 @@ for (t in c(10,tmax/4,2*tmax/4, 3*tmax/4,tmax))
   colored_values <- color_palette[as.numeric(cut(-1 * Xm[t, -1], 
                                                  seq(min.o, max.o, length = 255),
                                                  include.lowest = TRUE))]
-  qgraph(adj, layout = l, labels = FALSE, color=colored_values,vsize=2.5,title=paste('    time =',t))
+  qgraph(adj, layout = l, labels = FALSE, color=colored_values,vsize=3.5,title=paste('    time =',t),border.width=.1)
 }
 
 #plot the time series for all nodes
